@@ -10,6 +10,13 @@ typedef struct pos
 
 }p;
 
+typedef struct 
+{
+	p cords;
+	char type; 
+
+}cell;
+
 typedef struct residential
 {
 	int numRes;
@@ -58,7 +65,7 @@ typedef struct comManager
 
 typedef struct cmap
 {
-	char** m;
+	cell** m;
 	p** index;
 	int rows;
 	int cols;

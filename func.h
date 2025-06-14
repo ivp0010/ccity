@@ -40,23 +40,23 @@ void splitter(map* city, char filename[], rm* rman, im* iman, cm* cman)
 		}
 
 	}
+
 	city->rows = lines;
 	city->cols = lineSize;
 	fclose(fp);
-
-	city->m = (char**)malloc(lines * sizeof(char*));
+	city->m = (cell**)malloc(lines * sizeof(cell*));
 	for(int i = 0; i < lines; i++)
 	{
-		city->m[i] = (char*)malloc(lineSize * sizeof(char));
+		city->m[i] = (cell*)malloc(lineSize * sizeof(cell));
 	}
-
 	fp = fopen(filename, "r");
 	unsigned int x = 0;
 	unsigned int y = 0;
 	while((ch = fgetc(fp)) != EOF)
 	{
+
 		if(ch == 'r')
-		{
+		{		
 			addRes(rman);
 			rman->rStore[rman->numRes - 1].position.x = x;
 			rman->rStore[rman->numRes - 1].position.y = y;
@@ -75,7 +75,7 @@ void splitter(map* city, char filename[], rm* rman, im* iman, cm* cman)
 		}
 		if(ch != ',')
 		{
-			if(ch != '\n'){city->m[y][x] = ch;}
+			if(ch != '\n'){city->m[y][x].type = ch;}
 			x++;
 		}
 		if(ch == '\n')
@@ -84,6 +84,7 @@ void splitter(map* city, char filename[], rm* rman, im* iman, cm* cman)
 			x = 0;
 		}
 	}
+	
 
 
 	
