@@ -3,14 +3,17 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "cell.h"
-#include "func.h"
 
-typedef struct
+
+typedef struct graph
 {
 	int** adjMat;
-	int* sizes;	
+	int* sizes;
+	char* type;
 }graph;
+
 p decoder(int index, int col);
+int incoder(int x, int y, int col);
 void makeGraph(graph* g, int r, int c, map* city);
 
 #endif

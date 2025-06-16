@@ -11,13 +11,21 @@ p decoder(int index, int col)
 	return temp;
 }
 
+int incoder(int x, int y, int col)
+{
+	return y * col + x;
+}
+
+
 void makeGraph(graph* g, int r, int c, map* city)
 {
 	g->adjMat = (int**)malloc((r * c)  * sizeof(int*));
 	g->sizes = (int*)malloc((r * c) * sizeof(int));
+	g->type = (char*)malloc((r * c) * sizeof(char));
 	for(int i = 0; i < r*c; i++)
 	{
 		p temp = decoder(i, c);
+		g->type[i] = city->m[temp.y][temp.x].type;
 		if(temp.y == 0)
 		{
 			if(temp.x != 0 && temp.x != c - 1)

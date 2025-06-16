@@ -10,7 +10,7 @@ typedef struct pos
 
 }p;
 
-typedef struct 
+typedef struct cell 
 {
 	p cords;
 	char type; 

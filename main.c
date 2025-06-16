@@ -5,17 +5,24 @@
 #include "graph.h"
 int main()
 {
-	rm rman = {.numRes = 0};
-	im iman = {.numInd = 0};
-	cm cman = {.numCom = 0};
+
+	rm rMan = {.numRes = 0};
+	im iMan = {.numInd = 0};
+	cm cMan = {.numCom = 0};
 	map city;
-	splitter(&city, "test.csv", &rman, &iman, &cman); 
+	splitter(&city, "test.csv", &rMan, &iMan, &cMan);
+	printMap(&city);
+	map changeMap = city;
 	graph g;
-	makeGraph(&g, city.rows, city.cols, &city);
+	makeGraph(&g, city.rows, city.cols, &changeMap);
 	
 
-
-
+	for(int i = 0; i < 5; i++)
+	{
+		resChecker(&rMan, &g, &changeMap, &iMan, &cMan);
+		updateMap(&city, &changeMap, &rMan, &iMan, &cMan);
+		printMap(&changeMap);
+	}
+	
 return 0;
 }
-
