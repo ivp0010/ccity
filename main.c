@@ -3,6 +3,8 @@
 #include "func.h"
 #include "cell.h"
 #include "graph.h"
+#include "queue.h"
+
 int main()
 {
 
@@ -14,6 +16,7 @@ int main()
 	printMap(&city);
 	map changeMap = city;
 	graph g;
+	queue q = {.head = NULL, .tail = NULL};
 	makeGraph(&g, city.rows, city.cols, &changeMap);
 	
 

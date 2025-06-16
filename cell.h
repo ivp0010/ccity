@@ -20,9 +20,9 @@ typedef struct cell
 typedef struct residential
 {
 	int numRes;
+	bool* isEmp;
 	p position;
 	bool toInc;
-
 }res;
 
 typedef struct industrial

@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include "cell.h"
 #include "graph.h"
-
+#include "queue.h"
 
 void addRes(rm* manager);
 void addInd(im* manager);

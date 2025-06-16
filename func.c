@@ -3,6 +3,7 @@
 #include "graph.h"
 #include "func.h"
 #include "cell.h"
+#include "queue.h"
 
 void addRes(rm* manager)
 {
@@ -244,6 +245,22 @@ void printMap(map* city)
 	}	
 }
 
+int getNumWorkers(rm* manager)
+{
+	int count = 0;
+	for(int i = 0; i < manager->numRes; i++)
+	{
+		for(int j = 0; j < manager->rStore[i].numRes; j++)
+		{
+			if(manager->rStore[i].isEmp[i] == false)
+			{
+				count++;
+			}
+		}
+	}
+	return count;
+}
+
 void updateMap(map* ogCity, map* city, rm* rMan, im* iMan, cm* cMan)
 {
 	for(int i = 0; i < city->rows * city->cols; i++)
@@ -258,6 +275,8 @@ void updateMap(map* ogCity, map* city, rm* rMan, im* iMan, cm* cMan)
 				{
 					rMan->rStore[idx].toInc = false;
 					rMan->rStore[idx].numRes += 1;
+					rMan->rStore[idx].isEmp = (bool*)realloc(rMan->rStore[idx].isEmp, rMan->rStore[idx].numRes * sizeof(bool));
+					rMan->rStore[idx].isEmp[rMan->rStore[idx].numRes - 1] = false; 
 					city->m[temp.y][temp.x].type = '0' + rMan->rStore[idx].numRes;
 					break;
 				}
@@ -289,4 +308,9 @@ void updateMap(map* ogCity, map* city, rm* rMan, im* iMan, cm* cMan)
 			}
 		}
 	}
+}
+
+void resolver(graph* g, rm* rMan, im* iMan, cm* cMan, queue *q)
+{	
+	
 }
