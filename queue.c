@@ -13,11 +13,14 @@ void push(queue* q, int value, char t)
 		q->head = newNode;
 		q->tail = newNode;
 		newNode->next = NULL;
+		q->size += 1;
+		return;
 	}
 
 	q->tail->next = newNode;
 	q->tail = newNode;
 	newNode->next = NULL;
+	q->size += 1;
 }
 
 typeIdx pop(queue* q)
@@ -26,5 +29,6 @@ typeIdx pop(queue* q)
 	q->head = q->head->next;
 	typeIdx tempTI = temp->ti;
 	free(temp);
+	q->size -= 1;
 	return tempTI;
 }

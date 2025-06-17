@@ -17,6 +17,7 @@ void addInd(im* manager)
 	manager->numInd = manager->numInd + 1;
 	manager->iStore = (ind*)realloc(manager->iStore, manager->numInd * sizeof(ind));
 	manager->iStore[manager->numInd - 1].toInc = false;
+	manager->iStore[manager->numInd - 1].priority = 0;
 }
 
 void addCom(cm* manager)
@@ -24,6 +25,7 @@ void addCom(cm* manager)
 	manager->numCom = manager->numCom + 1;
 	manager->cStore = (com*)realloc(manager->cStore, manager->numCom * sizeof(com));
 	manager->cStore[manager->numCom - 1].toInc = false;
+	manager->cStore[manager->numCom - 1].priority = 0;
 }
 
 int getResIndex(rm* manager, int x, int y)
@@ -239,9 +241,9 @@ void printMap(map* city)
 	{
 		for(int j = 0; j < city->cols; j++)
 		{
-			printf("%c ", city->m[i][j].type);
+			printf("%c  ", city->m[i][j].type);
 		}
-		printf("\n");
+		printf("\n\n");
 	}	
 }
 
@@ -261,8 +263,27 @@ int getNumWorkers(rm* manager)
 	return count;
 }
 
-void updateMap(map* ogCity, map* city, rm* rMan, im* iMan, cm* cMan)
+void updateMap(queue* q, map* ogCity, map* city, rm* rMan, im* iMan, cm* cMan)
 {
+
+	while(q->size != 0)
+	{
+		typeIdx temp = pop(q);
+		if(temp.type == 'c')
+		{
+			if(getNumWorkers(rMan) < 1){continue;}
+			cMan->cStore[temp.index].toInc = true;
+			getWorkers(1, rMan);
+		}
+		else if(temp.type == 'i')
+		{
+			if(getNumWorkers(rMan) < 2){continue;}
+			iMan->iStore[temp.index].toInc = true;
+			getWorkers(2, rMan);
+		}
+
+	}
+
 	for(int i = 0; i < city->rows * city->cols; i++)
 	{
 		p temp = decoder(i, city->cols);
@@ -275,7 +296,14 @@ void updateMap(map* ogCity, map* city, rm* rMan, im* iMan, cm* cMan)
 				{
 					rMan->rStore[idx].toInc = false;
 					rMan->rStore[idx].numRes += 1;
-					rMan->rStore[idx].isEmp = (bool*)realloc(rMan->rStore[idx].isEmp, rMan->rStore[idx].numRes * sizeof(bool));
+					if(rMan->rStore[idx].numRes == 1)
+					{
+						rMan->rStore[idx].isEmp = (bool*)malloc(sizeof(bool));
+					}
+					else
+					{
+						rMan->rStore[idx].isEmp = (bool*)realloc(rMan->rStore[idx].isEmp, rMan->rStore[idx].numRes * sizeof(bool));
+					}
 					rMan->rStore[idx].isEmp[rMan->rStore[idx].numRes - 1] = false; 
 					city->m[temp.y][temp.x].type = '0' + rMan->rStore[idx].numRes;
 					break;
@@ -310,7 +338,351 @@ void updateMap(map* ogCity, map* city, rm* rMan, im* iMan, cm* cMan)
 	}
 }
 
-void resolver(graph* g, rm* rMan, im* iMan, cm* cMan, queue *q)
+void getWorkers(int num, rm* manager)
+{
+	int count = 0;
+	for(int i = 0; i < manager->numRes; i++)
+	{
+		for(int j = 0; j < manager->rStore[i].numRes; j++)
+		{
+			if(manager->rStore[i].isEmp[j] == false)
+			{
+				manager->rStore[i].isEmp[j] = true;
+				count++;
+				if(num == count){return;}
+			}
+		}
+	}
+
+}
+
+int getTotalPop(graph* g, int index, int cols, rm* rMan, im* iMan, cm* cMan)
+{
+	char type;
+	int pop = 0;
+	for(int i = 0; i < g->sizes[i]; i++)
+	{	
+		type = g->type[g->adjMat[index][i]];
+		if(type == 'r' || type == 'i' || type == 'c')
+		{
+			switch(type)
+			{
+				case 'r': 
+				{
+					p temp = decoder(i , cols);
+					int idx = getResIndex(rMan, temp.x, temp.y);
+					pop += rMan->rStore[idx].numRes;
+					break;
+				}
+				case 'i': 
+				{	
+					p temp = decoder(i , cols);
+					int idx = getIndIndex(iMan, temp.x, temp.y);
+					pop += iMan->iStore[idx].numInd;
+					break;
+				}
+				case 'c': 
+				{	
+					p temp = decoder(i , cols);
+					int idx = getComIndex(cMan, temp.x, temp.y);
+					pop += cMan->cStore[idx].numCom;
+					break;
+				}
+			}
+		}
+	}
+return pop;
+}
+
+
+void resolver(graph* g, map* city, rm* rMan, im* iMan, cm* cMan, queue *q)
 {	
+	//commercial
+	int* canInc;
+	int size = 0;
+	for(int i = 0; i < (city->rows * city->cols); i++)
+	{
+		if(g->type[i] != 'c'){continue;}
+		p temp = decoder(i, city->cols);
+		int idx = getComIndex(cMan, temp.x, temp.y);
 	
+		switch(cMan->cStore[idx].numCom)
+		{
+			case 0:	
+			{
+				for(int j = 0; j < g->sizes[i]; j++)
+				{
+					if(g->type[g->adjMat[i][j]] == 'T')			
+					{
+						if(size == 0){canInc = (int*)malloc(sizeof(int));}
+						else{canInc = (int*)realloc(canInc, sizeof(int) * size + 1);}
+						size++;
+						canInc[size - 1] = idx;
+						break;
+					}
+				}
+				if(getAdjPop(g, i, city->cols, rMan, iMan, cMan, 1) > 0)
+				{
+					if(size == 0){canInc = (int*)malloc(sizeof(int));}
+					else{canInc = (int*)realloc(canInc, sizeof(int) * size + 1);}
+					size++;
+					canInc[size - 1] = idx;
+					break;
+				}
+			break;	
+			}
+			case 1:
+			{
+				if(getAdjPop(g, i, city->cols, rMan, iMan, cMan, 1) > 1)
+				{
+					if(size == 0){canInc = (int*)malloc(sizeof(int));}
+					else{canInc = (int*)realloc(canInc, sizeof(int) * size + 1);}
+					size++;
+					canInc[size - 1] = idx;
+					cMan->cStore[canInc[size - 1]].priority += 1000;
+					break;
+				}
+			break;
+			}
+		}
+	}
+		bool swap;	
+		for(int i = 0; i < size; i++)
+		{
+			swap = false;
+			for(int j = 0; j < size; j++)
+			{
+				if(getTotalPop(g, canInc[i], city->cols, rMan, iMan, cMan) < getTotalPop(g, canInc[j], city->cols, rMan, iMan, cMan))
+				{
+					int temp = canInc[i];
+					canInc[i] = canInc[j];
+					canInc[j] = temp;
+					swap = true;
+				}
+			}
+			if(!swap){break;}
+		}
+	
+		for(int i = 0; i < size; i++)
+		{
+			if(getTotalPop(g, canInc[i], city->cols, rMan, iMan, cMan) == getTotalPop(g, canInc[i - 1], city->cols, rMan, iMan, cMan) && i != 0)
+			{
+				cMan->cStore[canInc[i]].priority += cMan->cStore[canInc[i - 1]].priority;
+				continue;
+			}
+
+			cMan->cStore[canInc[i]].priority += 100 - (10 * i);
+		}
+
+		for(int i = 0; i < size; i++)
+		{
+			swap = false;
+			for(int j = 0; j < size; j++)
+			{
+				if(cMan->cStore[canInc[i]].position.y < cMan->cStore[canInc[j]].position.y)
+				{
+					int temp = canInc[i];
+					canInc[i] = canInc[j];
+					canInc[j] = temp;
+					swap = true;	
+				}
+			}
+			if(!swap){break;}
+		}
+
+		for(int i = 0; i < size; i++)
+		{
+			if(cMan->cStore[canInc[i]].position.y == cMan->cStore[canInc[i - 1]].position.y&& i != 0)
+			{
+				cMan->cStore[canInc[i]].priority += cMan->cStore[canInc[i]].priority;
+				continue;
+			}
+
+			cMan->cStore[canInc[i]].priority += 50 - (5 * i);
+		}
+			
+		for(int i = 0; i < size; i++)
+		{
+			swap = false;
+			for(int j = 0; j < size; j++)
+			{
+				if(cMan->cStore[canInc[i]].position.x < cMan->cStore[canInc[j]].position.x)
+				{
+					int temp = canInc[i];
+					canInc[i] = canInc[j];
+					canInc[j] = temp;
+					swap = true;	
+				}
+			}
+			if(!swap){break;}
+		}
+
+		for(int i = 0; i < size; i++)
+		{
+			if(cMan->cStore[canInc[i]].position.x == cMan->cStore[canInc[i - 1]].position.x && i != 0)
+			{
+				cMan->cStore[canInc[i]].priority += cMan->cStore[canInc[i]].priority;
+				continue;
+			}
+
+			cMan->cStore[canInc[i]].priority += 10 - (1 * i);
+		}
+		
+		for(int i = 0; i < size; i++)
+		{
+			push(q, canInc[i], 'c');
+			cMan->cStore[canInc[i]].priority = 0;
+		}
+		free(canInc);
+		int* indInc;
+		size = 0;
+		//Industrial
+		for(int i = 0; i < (city->rows * city->cols); i++)
+		{
+			if(g->type[i] != 'i'){continue;}
+			p temp = decoder(i, city->cols);
+			int idx = getIndIndex(iMan, temp.x, temp.y);
+	
+			switch(iMan->iStore[idx].numInd)
+			{
+				case 0:	
+				{
+					for(int j = 0; j < g->sizes[i]; j++)
+					{
+						if(g->type[g->adjMat[i][j]] == 'T')			
+						{
+							if(size == 0){indInc = (int*)malloc(sizeof(int));}
+							else{indInc = (int*)realloc(indInc, sizeof(int) * size + 1);}
+							size++;
+							indInc[size - 1] = idx;
+							break;
+						}
+					}
+					if(getAdjPop(g, i, city->cols, rMan, iMan, cMan, 1) > 0)
+					{
+						if(size == 0){indInc = (int*)malloc(sizeof(int));}
+						else{indInc = (int*)realloc(indInc, sizeof(int) * size + 1);}
+						size++;
+						indInc[size - 1] = idx;
+						break;
+					}
+				break;	
+				}
+				case 1:
+				{
+					if(getAdjPop(g, i, city->cols, rMan, iMan, cMan, 1) > 1)
+					{
+						if(size == 0){indInc = (int*)malloc(sizeof(int));}
+						else{indInc = (int*)realloc(indInc, sizeof(int) * size + 1);}
+						size++;
+						indInc[size - 1] = idx;
+						iMan->iStore[indInc[size - 1]].priority += 500;
+						break;
+					}
+				break;
+				}
+				case 2:
+				{
+					if(getAdjPop(g, i, city->cols, rMan, iMan, cMan, 1) > 3)
+					{
+						if(size == 0){indInc = (int*)malloc(sizeof(int));}
+						else{indInc = (int*)realloc(indInc, sizeof(int) * size + 1);}
+						size++;
+						indInc[size - 1] = idx;
+						iMan->iStore[indInc[size - 1]].priority += 1000;
+						break;
+					}
+				break;
+				}
+			}
+		}
+		
+		
+		for(int i = 0; i < size; i++)
+		{
+			swap = false;
+			for(int j = 0; j < size; j++)
+			{
+				if(getTotalPop(g, indInc[i], city->cols, rMan, iMan, cMan) < getTotalPop(g, indInc[j], city->cols, rMan, iMan, cMan))
+				{
+					int temp = indInc[i];
+					indInc[i] = indInc[j];
+					indInc[j] = temp;
+					swap = true;
+				}
+			}
+			if(!swap){break;}
+		}
+	
+		for(int i = 0; i < size; i++)
+		{
+			if(getTotalPop(g, indInc[i], city->cols, rMan, iMan, cMan) == getTotalPop(g, indInc[i - 1], city->cols, rMan, iMan, cMan) && i != 0)
+			{
+				iMan->iStore[indInc[i]].priority += iMan->iStore[indInc[i - 1]].priority;
+				continue;
+			}
+
+			iMan->iStore[indInc[i]].priority += 100 - (10 * i);
+		}
+
+		for(int i = 0; i < size; i++)
+		{
+			swap = false;
+			for(int j = 0; j < size; j++)
+			{
+				if(iMan->iStore[indInc[i]].position.y < iMan->iStore[indInc[j]].position.y)
+				{
+					int temp = indInc[i];
+					indInc[i] = indInc[j];
+					indInc[j] = temp;
+					swap = true;	
+				}
+			}
+			if(!swap){break;}
+		}
+		
+		for(int i = 0; i < size; i++)
+		{
+			if(iMan->iStore[indInc[i]].position.y == iMan->iStore[indInc[i - 1]].position.y && i != 0)
+			{
+				iMan->iStore[indInc[i]].priority += iMan->iStore[indInc[i]].priority;
+				continue;
+			}
+
+			iMan->iStore[indInc[i]].priority += 50 - (5 * i);
+		}
+			
+		for(int i = 0; i < size; i++)
+		{
+			swap = false;
+			for(int j = 0; j < size; j++)
+			{
+				if(iMan->iStore[indInc[i]].position.x < iMan->iStore[indInc[j]].position.x)
+				{
+					int temp = indInc[i];
+					indInc[i] = indInc[j];
+					indInc[j] = temp;
+					swap = true;	
+				}
+			}
+			if(!swap){break;}
+		}
+
+		for(int i = 0; i < size; i++)
+		{
+			if(iMan->iStore[indInc[i]].position.x == iMan->iStore[indInc[i - 1]].position.x && i != 0)
+			{
+				iMan->iStore[indInc[i]].priority += iMan->iStore[indInc[i]].priority;
+				continue;
+			}
+
+			iMan->iStore[indInc[i]].priority += 10 - (1 * i);
+		}
+		
+		for(int i = 0; i < size; i++)
+		{
+			push(q, indInc[i], 'i');
+			iMan->iStore[indInc[i]].priority = 0;
+		}
+		free(indInc);
 }

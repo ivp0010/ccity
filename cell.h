@@ -30,6 +30,7 @@ typedef struct industrial
 	int numInd;
 	p position;
 	bool toInc;
+	int priority;
 
 }ind;
 
@@ -38,6 +39,7 @@ typedef struct commercial
 	int numCom;
 	p position;
 	bool toInc;
+	int priority;
 
 }com;
 

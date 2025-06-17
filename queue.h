@@ -20,6 +20,7 @@ typedef struct queue
 {
 	node* head;
 	node* tail;
+	int size;
 
 }queue;
 

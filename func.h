@@ -15,6 +15,8 @@ void printMap(map* city);
 int getResIndex(rm* manager, int x, int y);
 int getIndIndex(im* manager, int x, int y);
 int getComIndex(cm* manager, int x, int y);
-void updateMap(map* ogCity, map* city, rm* rMan, im* iMan, cm* cMan);
+void updateMap(queue *q, map* ogCity, map* city, rm* rMan, im* iMan, cm* cMan);
+void resolver(graph* g, map* city, rm* rMan, im* iMan, cm* cMan, queue *q);
+void getWorkers(int num, rm* manager);
 
 #endif
