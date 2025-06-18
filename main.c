@@ -11,7 +11,7 @@ int main()
 	rm rMan = {.numRes = 0};
 	im iMan = {.numInd = 0};
 	cm cMan = {.numCom = 0};
-	map city;
+	map city = {.mapSize = 0};
 	char* name = "test.csv";
 	splitter(&city, name, &rMan, &iMan, &cMan);
 	printMap(&city);
@@ -21,13 +21,13 @@ int main()
 	makeGraph(&g, city.rows, city.cols, &changeMap);
 	
 
-	for(int i = 0; i < 5; i++)
+	for(int i = 0; i < 20; i++)
 	{
 		resChecker(&rMan, &g, &changeMap, &iMan, &cMan);
 		resolver(&g, &city, &rMan, &iMan, &cMan, &q);
 		updateMap(&q, &city, &changeMap, &rMan, &iMan, &cMan);
-		printMap(&changeMap);
 	}
+	printMap(&changeMap);
 	
 return 0;
 }

@@ -69,8 +69,10 @@ typedef struct cmap
 {
 	cell** m;
 	p** index;
+	int mapSize;
+	int* colLen;
 	int rows;
-	int cols;
+
 }map;
 
 #endif

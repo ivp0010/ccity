@@ -64,8 +64,6 @@ int getComIndex(cm* manager, int x, int y)
 return -1;
 }
 
-
-
 void splitter(map* city, char filename[], rm* rman, im* iman, cm* cman)
 {
 	FILE* fp = fopen(filename, "r");
@@ -77,8 +75,20 @@ void splitter(map* city, char filename[], rm* rman, im* iman, cm* cman)
 		if(ch == '\n')
 		{
 			lines++;
+			if(sizeof(city->colLen) == 0)
+			{
+				city->colLen = (int*)malloc(sizeof(int));
+				city->colLen = lineSize;
+				lineSize = 0;
+			}
+			else
+			{
+				city->colLen = (int*)realloc(lines * sizeof(int));
+				city->colLen[lines - 1] = lineSize;
+				lineSize = 0;
+			}
 		}
-		else if(lines == 0 && ch != ',')
+		else if(ch != ',')
 		{
 			lineSize++;
 		}
@@ -86,12 +96,16 @@ void splitter(map* city, char filename[], rm* rman, im* iman, cm* cman)
 	}
 
 	city->rows = lines;
-	city->cols = lineSize;
+	for(int i = 0; i < lines; i++)
+	{
+		city->mapSize += city->colLen[i]; 
+	}
+
 	fclose(fp);
 	city->m = (cell**)malloc(lines * sizeof(cell*));
 	for(int i = 0; i < lines; i++)
 	{
-		city->m[i] = (cell*)malloc(lineSize * sizeof(cell));
+		city->m[i] = (cell*)malloc(city->colLen[i] * sizeof(cell));
 	}
 	fp = fopen(filename, "r");
 	unsigned int x = 0;
@@ -130,7 +144,7 @@ void splitter(map* city, char filename[], rm* rman, im* iman, cm* cman)
 	}
 }
 
-int getAdjPop(graph* g,int index, int cols, rm* rMan, im* iMan, cm* cMan, int num)
+int getAdjPop(graph* g, int index, map* city, rm* rMan, im* iMan, cm* cMan, int num)
 {
 	char type;
 	int pop = 0;
@@ -143,7 +157,7 @@ int getAdjPop(graph* g,int index, int cols, rm* rMan, im* iMan, cm* cMan, int nu
 			{
 				case 'r': 
 				{
-					p temp = decoder(i , cols);
+					p temp = decoder(i , city->colLen, city->rows);
 					int idx = getResIndex(rMan, temp.x, temp.y);
 					if(rMan->rStore[idx].numRes >= num){pop++;}
 					break;
@@ -170,10 +184,10 @@ return pop;
 
 void resChecker(rm* rMan, graph* g, map* city, im* iMan, cm* cMan) 
 {
-	for(int i = 0; i < (city->rows * city->cols); i++)
+	for(int i = 0; i < city->mapSize; i++)
 	{
 		if(g->type[i] != 'r'){continue;}
-		p temp = decoder(i, city->cols);
+		p temp = decoder(i, city->colLen, city->rows);
 		int idx = getResIndex(rMan, temp.x, temp.y);
 	
 		switch(rMan->rStore[idx].numRes)
@@ -188,7 +202,7 @@ void resChecker(rm* rMan, graph* g, map* city, im* iMan, cm* cMan)
 						break;
 					}
 				}
-				if(getAdjPop(g, i, city->cols, rMan, iMan, cMan, 1) > 0)
+				if(getAdjPop(g, i, city->colLen[i], rMan, iMan, cMan, 1) > 0)
 				{
 					rMan->rStore[idx].toInc = true;
 					break;
@@ -197,7 +211,7 @@ void resChecker(rm* rMan, graph* g, map* city, im* iMan, cm* cMan)
 			}
 			case 1:
 			{
-				if(getAdjPop(g, i, city->cols, rMan, iMan, cMan, 1) > 1)
+				if(getAdjPop(g, i, city->colLen[i], rMan, iMan, cMan, 1) > 1)
 				{
 					rMan->rStore[idx].toInc = true;
 					break;
@@ -206,7 +220,7 @@ void resChecker(rm* rMan, graph* g, map* city, im* iMan, cm* cMan)
 			}
 			case 2:
 			{
-				if(getAdjPop(g, i, city->cols, rMan, iMan, cMan, 2) > 3)
+				if(getAdjPop(g, i, city->colLen[i], rMan, iMan, cMan, 2) > 3)
 				{
 					rMan->rStore[idx].toInc = true;
 					break;
@@ -215,7 +229,7 @@ void resChecker(rm* rMan, graph* g, map* city, im* iMan, cm* cMan)
 			}
 			case 3:
 			{
-				if(getAdjPop(g, i, city->cols, rMan, iMan, cMan, 3) > 5)
+				if(getAdjPop(g, i, city->colLen[i], rMan, iMan, cMan, 3) > 5)
 				{
 					rMan->rStore[idx].toInc = true;
 					break;
@@ -224,7 +238,7 @@ void resChecker(rm* rMan, graph* g, map* city, im* iMan, cm* cMan)
 			}
 			case 4:
 			{
-				if(getAdjPop(g, i, city->cols, rMan, iMan, cMan, 4) > 7)
+				if(getAdjPop(g, i, city->colLen[i], rMan, iMan, cMan, 4) > 7)
 				{
 					rMan->rStore[idx].toInc = true;
 					break;
@@ -239,7 +253,7 @@ void printMap(map* city)
 {
 	for(int i = 0; i < city->rows; i++)
 	{
-		for(int j = 0; j < city->cols; j++)
+		for(int j = 0; j < city->colLen[i]; j++)
 		{
 			printf("%c  ", city->m[i][j].type);
 		}
@@ -286,7 +300,7 @@ void updateMap(queue* q, map* ogCity, map* city, rm* rMan, im* iMan, cm* cMan)
 
 	for(int i = 0; i < city->rows * city->cols; i++)
 	{
-		p temp = decoder(i, city->cols);
+		p temp = decoder(i, city->colLen, city->rows);
 		switch(ogCity->m[temp.y][temp.x].type)
 		{
 			case 'r':
@@ -356,7 +370,7 @@ void getWorkers(int num, rm* manager)
 
 }
 
-int getTotalPop(graph* g, int index, int cols, rm* rMan, im* iMan, cm* cMan)
+int getTotalPop(graph* g, map* city, int index, rm* rMan, im* iMan, cm* cMan)
 {
 	char type;
 	int pop = 0;
@@ -369,21 +383,21 @@ int getTotalPop(graph* g, int index, int cols, rm* rMan, im* iMan, cm* cMan)
 			{
 				case 'r': 
 				{
-					p temp = decoder(i , cols);
+					p temp = decoder(i , city->colLen, city->rows);
 					int idx = getResIndex(rMan, temp.x, temp.y);
 					pop += rMan->rStore[idx].numRes;
 					break;
 				}
 				case 'i': 
 				{	
-					p temp = decoder(i , cols);
+					p temp = decoder(i , city->colLen, city->rows);
 					int idx = getIndIndex(iMan, temp.x, temp.y);
 					pop += iMan->iStore[idx].numInd;
 					break;
 				}
 				case 'c': 
 				{	
-					p temp = decoder(i , cols);
+					p temp = decoder(i , city->colLen, city->rows);
 					int idx = getComIndex(cMan, temp.x, temp.y);
 					pop += cMan->cStore[idx].numCom;
 					break;
@@ -400,10 +414,10 @@ void resolver(graph* g, map* city, rm* rMan, im* iMan, cm* cMan, queue *q)
 	//commercial
 	int* canInc;
 	int size = 0;
-	for(int i = 0; i < (city->rows * city->cols); i++)
+	for(int i = 0; i < city->mapSize; i++)
 	{
 		if(g->type[i] != 'c'){continue;}
-		p temp = decoder(i, city->cols);
+		p temp = decoder(i, city->colLen, city->rows);
 		int idx = getComIndex(cMan, temp.x, temp.y);
 	
 		switch(cMan->cStore[idx].numCom)
@@ -421,7 +435,7 @@ void resolver(graph* g, map* city, rm* rMan, im* iMan, cm* cMan, queue *q)
 						break;
 					}
 				}
-				if(getAdjPop(g, i, city->cols, rMan, iMan, cMan, 1) > 0)
+				if(getAdjPop(g, i, city, rMan, iMan, cMan, 1) > 0)
 				{
 					if(size == 0){canInc = (int*)malloc(sizeof(int));}
 					else{canInc = (int*)realloc(canInc, sizeof(int) * size + 1);}
@@ -433,7 +447,7 @@ void resolver(graph* g, map* city, rm* rMan, im* iMan, cm* cMan, queue *q)
 			}
 			case 1:
 			{
-				if(getAdjPop(g, i, city->cols, rMan, iMan, cMan, 1) > 1)
+				if(getAdjPop(g, i, city, rMan, iMan, cMan, 1) > 1)
 				{
 					if(size == 0){canInc = (int*)malloc(sizeof(int));}
 					else{canInc = (int*)realloc(canInc, sizeof(int) * size + 1);}
@@ -452,7 +466,7 @@ void resolver(graph* g, map* city, rm* rMan, im* iMan, cm* cMan, queue *q)
 			swap = false;
 			for(int j = 0; j < size; j++)
 			{
-				if(getTotalPop(g, canInc[i], city->cols, rMan, iMan, cMan) < getTotalPop(g, canInc[j], city->cols, rMan, iMan, cMan))
+				if(getTotalPop(g, canInc[i], city, rMan, iMan, cMan) < getTotalPop(g, canInc[j], city, rMan, iMan, cMan))
 				{
 					int temp = canInc[i];
 					canInc[i] = canInc[j];
@@ -465,7 +479,7 @@ void resolver(graph* g, map* city, rm* rMan, im* iMan, cm* cMan, queue *q)
 	
 		for(int i = 0; i < size; i++)
 		{
-			if(getTotalPop(g, canInc[i], city->cols, rMan, iMan, cMan) == getTotalPop(g, canInc[i - 1], city->cols, rMan, iMan, cMan) && i != 0)
+			if(getTotalPop(g, canInc[i], city, rMan, iMan, cMan) == getTotalPop(g, canInc[i - 1], city, rMan, iMan, cMan) && i != 0)
 			{
 				cMan->cStore[canInc[i]].priority += cMan->cStore[canInc[i - 1]].priority;
 				continue;
@@ -537,10 +551,10 @@ void resolver(graph* g, map* city, rm* rMan, im* iMan, cm* cMan, queue *q)
 		int* indInc;
 		size = 0;
 		//Industrial
-		for(int i = 0; i < (city->rows * city->cols); i++)
+		for(int i = 0; i < city->mapSize; i++)
 		{
 			if(g->type[i] != 'i'){continue;}
-			p temp = decoder(i, city->cols);
+			p temp = decoder(i, city->colLen, city->rows);
 			int idx = getIndIndex(iMan, temp.x, temp.y);
 	
 			switch(iMan->iStore[idx].numInd)
@@ -558,7 +572,7 @@ void resolver(graph* g, map* city, rm* rMan, im* iMan, cm* cMan, queue *q)
 							break;
 						}
 					}
-					if(getAdjPop(g, i, city->cols, rMan, iMan, cMan, 1) > 0)
+					if(getAdjPop(g, i, city, rMan, iMan, cMan, 1) > 0)
 					{
 						if(size == 0){indInc = (int*)malloc(sizeof(int));}
 						else{indInc = (int*)realloc(indInc, sizeof(int) * size + 1);}
@@ -570,7 +584,7 @@ void resolver(graph* g, map* city, rm* rMan, im* iMan, cm* cMan, queue *q)
 				}
 				case 1:
 				{
-					if(getAdjPop(g, i, city->cols, rMan, iMan, cMan, 1) > 1)
+					if(getAdjPop(g, i, city, rMan, iMan, cMan, 1) > 1)
 					{
 						if(size == 0){indInc = (int*)malloc(sizeof(int));}
 						else{indInc = (int*)realloc(indInc, sizeof(int) * size + 1);}
@@ -583,7 +597,7 @@ void resolver(graph* g, map* city, rm* rMan, im* iMan, cm* cMan, queue *q)
 				}
 				case 2:
 				{
-					if(getAdjPop(g, i, city->cols, rMan, iMan, cMan, 1) > 3)
+					if(getAdjPop(g, i, city, rMan, iMan, cMan, 1) > 3)
 					{
 						if(size == 0){indInc = (int*)malloc(sizeof(int));}
 						else{indInc = (int*)realloc(indInc, sizeof(int) * size + 1);}
@@ -603,7 +617,7 @@ void resolver(graph* g, map* city, rm* rMan, im* iMan, cm* cMan, queue *q)
 			swap = false;
 			for(int j = 0; j < size; j++)
 			{
-				if(getTotalPop(g, indInc[i], city->cols, rMan, iMan, cMan) < getTotalPop(g, indInc[j], city->cols, rMan, iMan, cMan))
+				if(getTotalPop(g, indInc[i], city, rMan, iMan, cMan) < getTotalPop(g, indInc[j], city, rMan, iMan, cMan))
 				{
 					int temp = indInc[i];
 					indInc[i] = indInc[j];
@@ -616,7 +630,7 @@ void resolver(graph* g, map* city, rm* rMan, im* iMan, cm* cMan, queue *q)
 	
 		for(int i = 0; i < size; i++)
 		{
-			if(getTotalPop(g, indInc[i], city->cols, rMan, iMan, cMan) == getTotalPop(g, indInc[i - 1], city->cols, rMan, iMan, cMan) && i != 0)
+			if(getTotalPop(g, indInc[i], city, rMan, iMan, cMan) == getTotalPop(g, indInc[i - 1], city, rMan, iMan, cMan) && i != 0)
 			{
 				iMan->iStore[indInc[i]].priority += iMan->iStore[indInc[i - 1]].priority;
 				continue;

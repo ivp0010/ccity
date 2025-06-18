@@ -3,28 +3,39 @@
 #include "graph.h"
 #include "cell.h"
 
-p decoder(int index, int col)
+p decoder(int index, int* row_lengths, int num_rows)
 {
-	p temp;
-	temp.x = index % col;
-	temp.y = index / col;
-	return temp;
+    p temp;
+    int i = 0;
+    while (i < num_rows && index >= row_lengths[i]) {
+        index -= row_lengths[i];
+        i++;
+    }
+    temp.y = i;
+    temp.x = index;
+    return temp;
 }
 
-int incoder(int x, int y, int col)
+
+int incoder(int x, int y, int* row_lengths)
 {
-	return y * col + x;
+    int index = 0;
+    for (int i = 0; i < y; i++) {
+        index += row_lengths[i];  // add up lengths of previous rows
+    }
+    index += x;
+    return index;
 }
 
 
-void makeGraph(graph* g, int r, int c, map* city)
+void makeGraph(graph* g, map* city)
 {
-	g->adjMat = (int**)malloc((r * c)  * sizeof(int*));
-	g->sizes = (int*)malloc((r * c) * sizeof(int));
-	g->type = (char*)malloc((r * c) * sizeof(char));
-	for(int i = 0; i < r*c; i++)
+	g->adjMat = (int**)malloc(city->mapSize  * sizeof(int*));
+	g->sizes = (int*)malloc(city->mapSize * sizeof(int));
+	g->type = (char*)malloc(city->mapSize * sizeof(char));
+	for(int i = 0; i < city->mapSize; i++)
 	{
-		p temp = decoder(i, c);
+		p temp = decoder(i, city->colLen, city->rows);
 		g->type[i] = city->m[temp.y][temp.x].type;
 		if(temp.y == 0)
 		{
@@ -33,9 +44,9 @@ void makeGraph(graph* g, int r, int c, map* city)
 				g->adjMat[i] = (int*)malloc(5 * sizeof(int));
 				g->adjMat[i][0] = i - 1;
 				g->adjMat[i][1] = i + 1;
-				g->adjMat[i][2] = i + (c - 1);
-				g->adjMat[i][3] = i + c;
-				g->adjMat[i][4] = i + (c + 1);
+				g->adjMat[i][2] = i + (city->colLen[i] - 1);
+				g->adjMat[i][3] = i + city->colLen[i];
+				g->adjMat[i][4] = i + (city->colLen[i] + 1);
 				g->sizes[i] = 5;
 				continue;
 			}
@@ -110,6 +121,7 @@ void makeGraph(graph* g, int r, int c, map* city)
 				g->adjMat[i][1] = i - c;
 				g->adjMat[i][2] = i - 1;
 				g->adjMat[i][3] = i + (c - 1);
+
 				g->adjMat[i][4] = i + c;
 				g->sizes[i] = 5;
 				continue;
