@@ -78,12 +78,12 @@ void splitter(map* city, char filename[], rm* rman, im* iman, cm* cman)
 			if(sizeof(city->colLen) == 0)
 			{
 				city->colLen = (int*)malloc(sizeof(int));
-				city->colLen = lineSize;
+				city->colLen[lines - 1] = lineSize;
 				lineSize = 0;
 			}
 			else
 			{
-				city->colLen = (int*)realloc(lines * sizeof(int));
+				city->colLen = (int*)realloc(city->colLen ,lines * sizeof(int));
 				city->colLen[lines - 1] = lineSize;
 				lineSize = 0;
 			}
@@ -95,21 +95,19 @@ void splitter(map* city, char filename[], rm* rman, im* iman, cm* cman)
 
 	}
 
-	city->rows = lines;
-	for(int i = 0; i < lines; i++)
-	{
-		city->mapSize += city->colLen[i]; 
-	}
-
 	fclose(fp);
+
 	city->m = (cell**)malloc(lines * sizeof(cell*));
+	city->index = (p**)malloc(lines * sizeof(p*));
 	for(int i = 0; i < lines; i++)
 	{
 		city->m[i] = (cell*)malloc(city->colLen[i] * sizeof(cell));
+		city->index[i] = (p*)malloc(city->colLen[i] * sizeof(p));
 	}
 	fp = fopen(filename, "r");
 	unsigned int x = 0;
 	unsigned int y = 0;
+
 	while((ch = fgetc(fp)) != EOF)
 	{
 
@@ -118,18 +116,32 @@ void splitter(map* city, char filename[], rm* rman, im* iman, cm* cman)
 			addRes(rman);
 			rman->rStore[rman->numRes - 1].position.x = x;
 			rman->rStore[rman->numRes - 1].position.y = y;
+			p temp;
+			temp.x = x;
+			temp.y = y;
+			city->index[y][x] = temp;
 		}
 		if(ch == 'i')
 		{
 			addInd(iman);
 			iman->iStore[iman->numInd - 1].position.x = x;
 			iman->iStore[iman->numInd - 1].position.y = y;
+			p temp;
+			temp.x = x;
+			temp.y = y;
+			city->index[y][x] = temp;
+
 		}
 		if(ch == 'c')
 		{
 			addCom(cman);
 			cman->cStore[cman->numCom - 1].position.x = x;
 			cman->cStore[cman->numCom - 1].position.y = y;
+			p temp;
+			temp.x = x;
+			temp.y = y;
+			city->index[y][x] = temp;
+
 		}
 		if(ch != ',')
 		{
@@ -148,7 +160,7 @@ int getAdjPop(graph* g, int index, map* city, rm* rMan, im* iMan, cm* cMan, int 
 {
 	char type;
 	int pop = 0;
-	for(int i = 0; i < g->sizes[i]; i++)
+	for(int i = 0; i < g->sizes[index]; i++)
 	{	
 		type = g->type[g->adjMat[index][i]];
 		if(type == 'r' || type == 'i' || type == 'c')
@@ -157,21 +169,23 @@ int getAdjPop(graph* g, int index, map* city, rm* rMan, im* iMan, cm* cMan, int 
 			{
 				case 'r': 
 				{
-					p temp = decoder(i , city->colLen, city->rows);
+					printf("%d\n", g->adjMat[index][i]);
+					p temp = decoder(g->adjMat[index][i] , city->colLen, city->rows);
+					printf("i = %d\n", i);
 					int idx = getResIndex(rMan, temp.x, temp.y);
 					if(rMan->rStore[idx].numRes >= num){pop++;}
 					break;
 				}
 				case 'i': 
 				{	
-					p temp = decoder(i , cols);
+					p temp = decoder(g->adjMat[index][i] , city->colLen, city->rows);
 					int idx = getIndIndex(iMan, temp.x, temp.y);
 					if(iMan->iStore[idx].numInd >= num){pop++;}
 					break;
 				}
 				case 'c': 
 				{	
-					p temp = decoder(i , cols);
+					p temp = decoder(g->adjMat[index][i] , city->colLen, city->rows);
 					int idx = getComIndex(cMan, temp.x, temp.y);
 					if(cMan->cStore[idx].numCom >= num){pop++;}
 					break;
@@ -298,7 +312,7 @@ void updateMap(queue* q, map* ogCity, map* city, rm* rMan, im* iMan, cm* cMan)
 
 	}
 
-	for(int i = 0; i < city->rows * city->cols; i++)
+	for(int i = 0; i < city->mapSize; i++)
 	{
 		p temp = decoder(i, city->colLen, city->rows);
 		switch(ogCity->m[temp.y][temp.x].type)
@@ -547,7 +561,9 @@ void resolver(graph* g, map* city, rm* rMan, im* iMan, cm* cMan, queue *q)
 			push(q, canInc[i], 'c');
 			cMan->cStore[canInc[i]].priority = 0;
 		}
+		printf("no\n");
 		free(canInc);
+		printf("yes\n");
 		int* indInc;
 		size = 0;
 		//Industrial

@@ -3,21 +3,31 @@
 #include "graph.h"
 #include "cell.h"
 
-p decoder(int index, int* row_lengths, int num_rows)
-{
+
+p decoder(int index, int* row_lengths, int num_rows) {
     p temp;
     int i = 0;
+    int original_index = index;
+
     while (i < num_rows && index >= row_lengths[i]) {
         index -= row_lengths[i];
         i++;
     }
+
+    if (i >= num_rows) {
+        fprintf(stderr, "decoder(): index %d ran past row count\n", original_index);
+        exit(1);
+    }
+
+    printf("decoder: original_index = %d → x = %d, y = %d (row %d, col %d)\n",
+           original_index, index, i, i, row_lengths[i]);
+
     temp.y = i;
     temp.x = index;
     return temp;
 }
 
-
-int incoder(int x, int y, int* row_lengths)
+int encoder(int x, int y, int* row_lengths)
 {
     int index = 0;
     for (int i = 0; i < y; i++) {
@@ -27,6 +37,17 @@ int incoder(int x, int y, int* row_lengths)
     return index;
 }
 
+int findCellIndex(map* city, int x, int y)
+{
+    if (y < 0 || y >= city->rows) return -1;
+    if (x < 0 || x >= city->colLen[y]) return -1;
+
+    int index = x;
+    for (int i = 0; i < y; i++) {
+        index += city->colLen[i];
+    }
+    return index;
+}
 
 void makeGraph(graph* g, map* city)
 {
@@ -37,112 +58,29 @@ void makeGraph(graph* g, map* city)
 	{
 		p temp = decoder(i, city->colLen, city->rows);
 		g->type[i] = city->m[temp.y][temp.x].type;
-		if(temp.y == 0)
+		int directions[8][2] = {{0,  1}, { 0, -1}, { 1,  0}, {-1,  0}, { 1,  1}, {-1,  1}, { 1, -1}, {-1, -1}};
+		int neb[8] = {-1, -1, -1, -1, -1, -1, -1, -1};	
+		int count = 0;
+		for(int j = 0; j < 8; j++)
 		{
-			if(temp.x != 0 && temp.x != c - 1)
-			{
-				g->adjMat[i] = (int*)malloc(5 * sizeof(int));
-				g->adjMat[i][0] = i - 1;
-				g->adjMat[i][1] = i + 1;
-				g->adjMat[i][2] = i + (city->colLen[i] - 1);
-				g->adjMat[i][3] = i + city->colLen[i];
-				g->adjMat[i][4] = i + (city->colLen[i] + 1);
-				g->sizes[i] = 5;
-				continue;
-			}
-			else if(temp.x == 0)
-			{
-				g->adjMat[i] = (int*)malloc(3 * sizeof(int));
-				g->adjMat[i][0] = i + 1;
-				g->adjMat[i][1] = i + c;
-				g->adjMat[i][2] = i + (c + 1);
-				g->sizes[i] = 3;
-				continue;
-			}
-			else
-			{
-				g->adjMat[i] = (int*)malloc(3 * sizeof(int));
-				g->adjMat[i][0] = i - 1;
-				g->adjMat[i][1] = i + (c - 1);
-				g->adjMat[i][2] = i + c;
-				g->sizes[i] = 3;
-				continue;
-			}
-		}
-		else if(temp.y == r - 1)
-		{
-			if(temp.x != 0 && temp.x != c - 1)
-			{
-				g->adjMat[i] = (int*)malloc(5 * sizeof(int));
-				g->adjMat[i][0] = i - 1;
-				g->adjMat[i][1] = i + 1;
-				g->adjMat[i][2] = i - (c - 1);
-				g->adjMat[i][3] = i - c;
-				g->adjMat[i][4] = i - (c + 1);
-				g->sizes[i] = 5;
-				continue;
-			}
-			else if(temp.x == 0)
-			{
-				g->adjMat[i] = (int*)malloc(5 * sizeof(int));
-				g->adjMat[i][0] = i + 1;
-				g->adjMat[i][1] = i - (c - 1);
-				g->adjMat[i][2] = i - c;
-				g->sizes[i] = 3;
-				continue;
-			}
-			else
-			{
-				g->adjMat[i] = (int*)malloc(5 * sizeof(int));
-				g->adjMat[i][0] = i - 1;
-				g->adjMat[i][1] = i - c;
-				g->adjMat[i][2] = i - (c + 1);
-				g->sizes[i] = 3;
-				continue;
-			}
-		}
-		else
-		{
-			if(temp.x == 0)
-			{
-				g->adjMat[i] = (int*)malloc(5 * sizeof(int));
-				g->adjMat[i][0] = i - c;
-				g->adjMat[i][1] = i - (c - 1);
-				g->adjMat[i][2] = i + 1;
-				g->adjMat[i][3] = i + c;
-				g->adjMat[i][4] = i + (c + 1);
-				g->sizes[i] = 5;
-				continue;
-			}
-			else if(temp.x == c - 1)
-			{
-				g->adjMat[i] = (int*)malloc(5 * sizeof(int));
-				g->adjMat[i][0] = i - (c + 1);
-				g->adjMat[i][1] = i - c;
-				g->adjMat[i][2] = i - 1;
-				g->adjMat[i][3] = i + (c - 1);
+			int nx = temp.x + directions[j][0];
+			int ny = temp.y + directions[j][1];
 
-				g->adjMat[i][4] = i + c;
-				g->sizes[i] = 5;
-				continue;
-			}
-			else
-			{
-				g->adjMat[i] = (int*)malloc(8 * sizeof(int));
-				g->adjMat[i][0] = i - (c + 1);
-				g->adjMat[i][1] = i - c;
-				g->adjMat[i][2] = i - (c - 1);
-				g->adjMat[i][3] = i - 1;
-				g->adjMat[i][4] = i + 1;
-				g->adjMat[i][5] = i + (c - 1);
-				g->adjMat[i][6] = i + c;
-				g->adjMat[i][7] = i + (c + 1);
-				g->sizes[i] = 8;
-				continue;
-			}
+			int adjID = findCellIndex(city, nx, ny);
+
+			if(adjID != -1)
+			{					
+				count++;
+				neb[count - 1] = adjID;
+			}	
 		}
+		g->sizes[i] = count;
+		g->adjMat[i] = (int*)malloc(count * sizeof(int));
+		for(int j = 0; j < count; j++)
+		{
+			g->adjMat[i][j] = neb[j];
+		}
+			
 	}
-	
-
-	
+		
 }

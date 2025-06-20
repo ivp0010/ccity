@@ -12,9 +12,10 @@ typedef struct graph
 	char* type;
 }graph;
 
-p decoder(int index, int col);
-int incoder(int x, int y, int col);
-void makeGraph(graph* g, int r, int c, map* city);
+p decoder(int index, int* row_lengths, int num_rows);
+int encoder(int x, int y, int* row_lengths);
+int findCellIndex(map* city, int x, int y);
+void makeGraph(graph* g, map* city);
 
 #endif
 
